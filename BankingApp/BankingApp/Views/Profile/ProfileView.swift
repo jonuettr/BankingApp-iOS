@@ -17,7 +17,15 @@ struct ProfileView: View {
     private let session =
         SessionManager.shared
 
+    // MARK: - Biometrics
+    @State private var biometricAuth =
+        BiometricAuthService()
 
+    @State private var biometricSettings =
+        BiometricSettings.shared
+
+    @State private var showBiometricError = false
+    
     // MARK: - Body
 
     var body: some View {
@@ -102,10 +110,30 @@ struct ProfileView: View {
                         }
 
 
-                        Label(
-                            "Autenticación biométrica",
-                            systemImage:
-                                "faceid"
+                        Toggle(
+                            isOn: Binding(
+                                get: {
+
+                                    biometricSettings.isEnabled
+                                },
+
+                                set: { newValue in
+
+                                    handleBiometricToggle(
+                                        newValue
+                                    )
+                                }
+                            )
+                        ) {
+
+                            Label(
+                                biometricAuth.biometricType.displayName,
+                                systemImage:
+                                    biometricAuth.biometricType.systemImage
+                            )
+                        }
+                        .disabled(
+                            !biometricAuth.isAvailable
                         )
                     }
 
@@ -131,8 +159,6 @@ struct ProfileView: View {
                             )
                         }
                     }
-
-
                     // MARK: - Information
 
                     Section(
@@ -157,6 +183,24 @@ struct ProfileView: View {
             .navigationTitle(
                 "Perfil"
             )
+            .alert(
+                "Autenticación no completada",
+                isPresented:
+                    $showBiometricError
+            ) {
+
+                Button(
+                    "Aceptar",
+                    role: .cancel
+                ) { }
+
+            } message: {
+
+                Text(
+                    biometricAuth.errorMessage
+                    ?? "No fue posible verificar tu identidad."
+                )
+            }
         }
     }
 
@@ -165,14 +209,63 @@ struct ProfileView: View {
 
     private func logout() {
 
+        // Al eliminar la sesión actual,
+        // BankingAppApp detectará el cambio
+        // y regresará automáticamente al LoginView.
         session.logout()
     }
-}
 
 
-// MARK: - Preview
+    // MARK: - Biometrics
 
-#Preview {
+    private func handleBiometricToggle(
+        _ newValue: Bool
+    ) {
 
-    ProfileView()
+        // Si el usuario está desactivando
+        // la biometría, no necesitamos volver
+        // a solicitar Face ID.
+        if !newValue {
+
+            biometricSettings.disable()
+
+            return
+        }
+
+
+        // Para activar Face ID necesitamos
+        // saber qué cliente está autenticado.
+        guard let customer =
+            session.currentCustomer
+        else {
+
+            return
+        }
+
+
+        // authenticate() es una función async,
+        // por eso la ejecutamos dentro de Task.
+        Task {
+
+            let success =
+                await biometricAuth.authenticate()
+
+
+            if success {
+
+                // Solamente asociamos Face ID
+                // al cliente después de que iOS
+                // haya confirmado su identidad.
+                biometricSettings.enable(
+                    for: customer.id
+                )
+
+            } else {
+
+                // Si Face ID falla o se cancela,
+                // mostramos nuestro Alert.
+                showBiometricError = true
+            }
+        }
+    }
 }
