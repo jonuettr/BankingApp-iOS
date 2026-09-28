@@ -120,21 +120,57 @@ final class HomeViewModel {
 
     // MARK: - Load Transactions
 
+    // MARK: - Load Transactions
+
     private func loadTransactions() {
 
-        // Set representa una colección de valores únicos.
-
+        // Primero obtenemos los IDs de todas las cuentas
+        // pertenecientes al cliente.
         let accountIds = Set(
             accounts.map { account in
                 account.id
             }
         )
 
-        // Después conservamos únicamente las transacciones
-        // cuya cuenta pertenece al cliente.
+        // También obtenemos los IDs de todas las tarjetas
+        // de crédito pertenecientes al cliente.
+        let creditCardIds = Set(
+            creditCards.map { card in
+                card.id
+            }
+        )
+
+        // Ahora recorremos todas las transacciones disponibles
+        // y conservamos solamente aquellas que pertenecen
+        // a alguno de los productos financieros del cliente.
         transactions = MockData.transactions.filter { transaction in
 
-            accountIds.contains(transaction.accountId)
+            // PRIMERA POSIBILIDAD:
+            // La transacción pertenece a una cuenta bancaria.
+            //
+            // Como accountId ahora es Int?, primero usamos
+            // "if let" para comprobar que contiene un valor.
+            if let accountId = transaction.accountId,
+               accountIds.contains(accountId) {
+
+                return true
+            }
+
+            // SEGUNDA POSIBILIDAD:
+            // La transacción pertenece a una tarjeta de crédito.
+            //
+            // Si creditCardId contiene un valor y ese ID
+            // pertenece al cliente, también conservamos
+            // la transacción.
+            if let creditCardId = transaction.creditCardId,
+               creditCardIds.contains(creditCardId) {
+
+                return true
+            }
+
+            // Si la transacción no pertenece ni a una cuenta
+            // ni a una tarjeta del cliente, la descartamos.
+            return false
         }
     }
 }

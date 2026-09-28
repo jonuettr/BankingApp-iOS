@@ -248,6 +248,7 @@ enum MockData {
         Transaction(
             id: 1001,
             accountId: 101,
+            creditCardId: nil,
             description: "Nómina",
             amount: Decimal(string: "28500.00")!,
             type: .deposit,
@@ -267,6 +268,7 @@ enum MockData {
         Transaction(
             id: 1002,
             accountId: 101,
+            creditCardId: nil,
             description: "Supermercado",
             amount: Decimal(string: "1248.60")!,
             type: .purchase,
@@ -286,6 +288,7 @@ enum MockData {
         Transaction(
             id: 1003,
             accountId: 101,
+            creditCardId: nil,
             description: "Servicio de internet",
             amount: Decimal(string: "670.00")!,
             type: .directDebit,
@@ -305,6 +308,7 @@ enum MockData {
         Transaction(
             id: 1004,
             accountId: 101,
+            creditCardId: nil,
             description: "Restaurante",
             amount: Decimal(string: "845.50")!,
             type: .purchase,
@@ -324,6 +328,7 @@ enum MockData {
         Transaction(
             id: 1005,
             accountId: 101,
+            creditCardId: nil,
             description: "Transferencia a ahorro",
             amount: Decimal(string: "5000.00")!,
             type: .transferOut,
@@ -345,6 +350,7 @@ enum MockData {
         Transaction(
             id: 1006,
             accountId: 102,
+            creditCardId: nil,
             description: "Transferencia recibida",
             amount: Decimal(string: "5000.00")!,
             type: .transferIn,
@@ -359,6 +365,99 @@ enum MockData {
             ),
             merchant: nil,
             reference: "TRF-1005"
+        ),
+      
+        // MARK: - Credit Card Transactions
+
+        // Los siguientes movimientos pertenecen a la tarjeta
+        // de crédito 501 de Alex.
+        // accountId: nil
+        // creditCardId: 501
+        // Esto indica que el movimiento pertenece a una tarjeta
+        // y no a una cuenta bancaria.
+
+        Transaction(
+            id: 1007,
+            accountId: nil,
+            creditCardId: 501,
+            description: "Cafetería",
+            amount: Decimal(string: "185.00")!,
+            type: .purchase,
+            category: .food,
+            status: .completed,
+            date: makeDate(
+                year: 2026,
+                month: 9,
+                day: 27,
+                hour: 9,
+                minute: 20
+            ),
+            merchant: "Café Central",
+            reference: nil
+        ),
+
+        Transaction(
+            id: 1008,
+            accountId: nil,
+            creditCardId: 501,
+            description: "Streaming",
+            amount: Decimal(string: "299.00")!,
+            type: .purchase,
+            category: .entertainment,
+            status: .completed,
+            date: makeDate(
+                year: 2026,
+                month: 9,
+                day: 25,
+                hour: 6,
+                minute: 0
+            ),
+            merchant: "Stream+",
+            reference: "SUB-0926"
+        ),
+
+        Transaction(
+            id: 1009,
+            accountId: nil,
+            creditCardId: 501,
+            description: "Gasolina",
+            amount: Decimal(string: "950.00")!,
+            type: .purchase,
+            category: .transportation,
+            status: .completed,
+            date: makeDate(
+                year: 2026,
+                month: 9,
+                day: 22,
+                hour: 19,
+                minute: 35
+            ),
+            merchant: "Estación Central",
+            reference: nil
+        ),
+
+        // Esta transacción está pendiente.
+        //
+        // Nos servirá para comprobar visualmente que nuestra
+        // interfaz puede representar diferentes estados.
+        Transaction(
+            id: 1010,
+            accountId: nil,
+            creditCardId: 501,
+            description: "Compra en línea",
+            amount: Decimal(string: "2199.00")!,
+            type: .purchase,
+            category: .shopping,
+            status: .pending,
+            date: makeDate(
+                year: 2026,
+                month: 9,
+                day: 27,
+                hour: 16,
+                minute: 40
+            ),
+            merchant: "Tienda Online",
+            reference: "WEB-1010"
         )
     ]
 

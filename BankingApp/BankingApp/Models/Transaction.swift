@@ -78,7 +78,11 @@ struct Transaction: Codable, Identifiable {
 
     // Cuenta a la que pertenece este movimiento.
 
-    let accountId: Int
+    // Cuenta bancaria relacionada con el movimiento.
+    let accountId: Int?
+
+    // Tarjeta de crédito relacionada con el movimiento.
+    let creditCardId: Int?
 
     // Texto que verá el usuario.
 
