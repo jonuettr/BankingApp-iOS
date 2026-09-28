@@ -223,6 +223,14 @@ struct HomeView: View {
             }
             .navigationTitle("Inicio")
         }
+        .onAppear {
+
+            // Cada vez que Inicio vuelve a aparecer,
+            // consultamos el estado bancario actual.
+            // Así una transferencia realizada desde otra pestaña
+            // se refleja inmediatamente.
+            viewModel.refresh()
+        }
     }
 
 

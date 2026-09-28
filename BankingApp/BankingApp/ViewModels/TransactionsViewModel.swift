@@ -39,6 +39,7 @@ enum TransactionFilter: String, CaseIterable, Identifiable {
 @Observable
 final class TransactionsViewModel {
 
+    private let customerId: Int
 
     // MARK: - Properties
 
@@ -57,6 +58,8 @@ final class TransactionsViewModel {
     // MARK: - Initialization
 
     init(customerId: Int) {
+
+        self.customerId = customerId
 
         loadTransactions(customerId: customerId)
     }
@@ -161,6 +164,15 @@ final class TransactionsViewModel {
             }
     }
 
+    // MARK: - Refresh
+
+    // Recarga el historial desde BankingService.
+    // Esto permite detectar movimientos creados después
+    // de inicializar este ViewModel.
+    func refresh() {
+
+        loadTransactions(customerId: customerId)
+    }
 
     // MARK: - Load Transactions
 
@@ -168,7 +180,7 @@ final class TransactionsViewModel {
 
         // Obtenemos las cuentas del cliente.
         let accountIds = Set(
-            MockData.accounts
+            BankingService.shared.accounts
                 .filter { account in
                     account.customerId == customerId
                 }
@@ -190,7 +202,7 @@ final class TransactionsViewModel {
 
         // Conservamos los movimientos que pertenezcan
         // a cualquiera de esos productos.
-        transactions = MockData.transactions.filter { transaction in
+        transactions = BankingService.shared.transactions.filter { transaction in
 
             if let accountId = transaction.accountId,
                accountIds.contains(accountId) {

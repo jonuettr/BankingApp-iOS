@@ -119,6 +119,12 @@ struct TransactionsView: View {
                 prompt: "Buscar movimientos"
             )
         }
+        .onAppear {
+
+            // Al regresar a esta pestaña recargamos
+            // los movimientos actuales de la sesión.
+            viewModel.refresh()
+        }
     }
 
 

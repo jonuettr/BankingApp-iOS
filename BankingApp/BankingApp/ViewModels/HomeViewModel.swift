@@ -100,7 +100,12 @@ final class HomeViewModel {
 
     private func loadAccounts(customerId: Int) {
 
-        accounts = MockData.accounts.filter { account in
+        // Ya no leemos las cuentas directamente desde MockData.
+        //
+        // BankingService.shared contiene el estado actual
+        // de la sesión, incluyendo los cambios producidos
+        // por las transferencias.
+        accounts = BankingService.shared.accounts.filter { account in
 
             account.customerId == customerId
         }
@@ -120,57 +125,59 @@ final class HomeViewModel {
 
     // MARK: - Load Transactions
 
-    // MARK: - Load Transactions
-
     private func loadTransactions() {
 
-        // Primero obtenemos los IDs de todas las cuentas
-        // pertenecientes al cliente.
         let accountIds = Set(
             accounts.map { account in
                 account.id
             }
         )
 
-        // También obtenemos los IDs de todas las tarjetas
-        // de crédito pertenecientes al cliente.
         let creditCardIds = Set(
             creditCards.map { card in
                 card.id
             }
         )
 
-        // Ahora recorremos todas las transacciones disponibles
-        // y conservamos solamente aquellas que pertenecen
-        // a alguno de los productos financieros del cliente.
-        transactions = MockData.transactions.filter { transaction in
+        // CAMBIO IMPORTANTE:
+        //
+        // Los movimientos ahora proceden de BankingService.
+        //
+        // Por tanto, si Transferir acaba de crear un nuevo
+        // movimiento, aquí podremos encontrarlo.
+        transactions =
+            BankingService.shared.transactions.filter { transaction in
 
-            // PRIMERA POSIBILIDAD:
-            // La transacción pertenece a una cuenta bancaria.
-            //
-            // Como accountId ahora es Int?, primero usamos
-            // "if let" para comprobar que contiene un valor.
-            if let accountId = transaction.accountId,
-               accountIds.contains(accountId) {
+                if let accountId = transaction.accountId,
+                   accountIds.contains(accountId) {
 
-                return true
+                    return true
+                }
+
+                if let creditCardId = transaction.creditCardId,
+                   creditCardIds.contains(creditCardId) {
+
+                    return true
+                }
+
+                return false
             }
+    }
+ 
+    // MARK: - Refresh
 
-            // SEGUNDA POSIBILIDAD:
-            // La transacción pertenece a una tarjeta de crédito.
-            //
-            // Si creditCardId contiene un valor y ese ID
-            // pertenece al cliente, también conservamos
-            // la transacción.
-            if let creditCardId = transaction.creditCardId,
-               creditCardIds.contains(creditCardId) {
+    // Vuelve a consultar el estado actual del servicio.
+    //
+    // La vista podrá llamar esta función cuando aparezca
+    // nuevamente en pantalla.
+    func refresh() {
 
-                return true
-            }
-
-            // Si la transacción no pertenece ni a una cuenta
-            // ni a una tarjeta del cliente, la descartamos.
-            return false
+        guard let customer else {
+            return
         }
+
+        loadAccounts(customerId: customer.id)
+        loadCreditCards(customerId: customer.id)
+        loadTransactions()
     }
 }
