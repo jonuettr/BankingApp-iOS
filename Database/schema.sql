@@ -161,7 +161,7 @@ CREATE TABLE CREDIT_CARD (
 
 CREATE TABLE BANK_TRANSACTION (
 
-    id_transaction INT PRIMARY KEY,
+    id_transaction INT AUTO_INCREMENT PRIMARY KEY,
 
     -- Uno de estos dos campos tendrá valor
     -- y el otro deberá ser NULL.
@@ -384,7 +384,7 @@ CREATE TABLE DEVICE (
 
 CREATE TABLE TRANSFER (
 
-    id_transfer INT PRIMARY KEY,
+    id_transfer INT AUTO_INCREMENT PRIMARY KEY,
 
     -- Cuenta desde la que sale el dinero.
     id_source_account INT NOT NULL,
@@ -455,7 +455,7 @@ CREATE TABLE TRANSFER (
 
 CREATE TABLE RISK_EVALUATION (
 
-    id_risk_evaluation INT PRIMARY KEY,
+    id_risk_evaluation INT AUTO_INCREMENT PRIMARY KEY,
 
     -- Transferencia evaluada.
     id_transfer INT NOT NULL,
@@ -508,7 +508,7 @@ CREATE TABLE RISK_EVALUATION (
 
 CREATE TABLE RISK_REASON (
 
-    id_risk_reason INT PRIMARY KEY,
+    id_risk_reason INT AUTO_INCREMENT PRIMARY KEY,
 
     -- Evaluación a la que pertenece esta razón.
     id_risk_evaluation INT NOT NULL,

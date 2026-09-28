@@ -37,4 +37,10 @@ public class BankTransactionService {
 
         return transactionRepository.findAllByCustomerId(customerId);
     }
+
+    public BankTransaction createTransaction(
+        BankTransaction transaction) {
+
+        return transactionRepository.save(transaction);
+    }
 }

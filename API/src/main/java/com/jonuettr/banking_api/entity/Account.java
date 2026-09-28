@@ -70,4 +70,32 @@ public class Account {
     public Boolean getActive() {
         return active;
     }
+
+    public void debit(BigDecimal amount) {
+
+    if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
+        throw new IllegalArgumentException(
+                "Debit amount must be greater than zero"
+        );
+    }
+
+    if (balance.compareTo(amount) < 0) {
+        throw new IllegalArgumentException(
+                "Insufficient account balance"
+        );
+    }
+
+    balance = balance.subtract(amount);
+}
+
+public void credit(BigDecimal amount) {
+
+    if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
+        throw new IllegalArgumentException(
+                "Credit amount must be greater than zero"
+        );
+    }
+
+    balance = balance.add(amount);
+}
 }

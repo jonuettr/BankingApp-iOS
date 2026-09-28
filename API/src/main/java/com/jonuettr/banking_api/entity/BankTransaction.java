@@ -4,6 +4,8 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -13,6 +15,8 @@ import java.time.LocalDateTime;
 public class BankTransaction {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+
     @Column(name = "id_transaction")
     private Integer id;
 
@@ -47,6 +51,30 @@ public class BankTransaction {
     private String reference;
 
     public BankTransaction() {
+    }
+
+    public BankTransaction(
+        Integer accountId,
+        Integer creditCardId,
+        String description,
+        BigDecimal amount,
+        String type,
+        String category,
+        String status,
+        LocalDateTime date,
+        String merchant,
+        String reference) {
+
+    this.accountId = accountId;
+    this.creditCardId = creditCardId;
+    this.description = description;
+    this.amount = amount;
+    this.type = type;
+    this.category = category;
+    this.status = status;
+    this.date = date;
+    this.merchant = merchant;
+    this.reference = reference;
     }
 
     public Integer getId() {
