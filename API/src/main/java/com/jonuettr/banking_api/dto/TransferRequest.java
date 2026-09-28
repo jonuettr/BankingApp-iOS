@@ -40,6 +40,17 @@ public class TransferRequest {
     )
     private String reference;
 
+// Identificador del dispositivo desde el que
+// se solicita la transferencia.
+//
+// El backend lo utilizará para comprobar si
+// pertenece al cliente y si es confiable.
+@NotBlank(message = "deviceIdentifier is required")
+@Size(
+        max = 255,
+        message = "deviceIdentifier must not exceed 255 characters"
+)
+private String deviceIdentifier;
 
     public TransferRequest() {
     }
@@ -64,4 +75,7 @@ public class TransferRequest {
     public String getReference() {
         return reference;
     }
+public String getDeviceIdentifier() {
+    return deviceIdentifier;
+}
 }
