@@ -5,7 +5,7 @@
 //  ViewModel encargado de preparar la información
 //  necesaria para HomeView.
 //
-//  Dentro del patrón MVVM:
+//  Dentro de MVVM:
 //
 //  Model     → Customer, Account, Transaction, etc.
 //  View      → HomeView
@@ -13,120 +13,109 @@
 //
 
 import Foundation
+import Observation
 
 
 // MARK: - Home View Model
-
-// @Observable permite que SwiftUI observe los cambios
-// realizados en este objeto.
 
 @Observable
 final class HomeViewModel {
 
 
-    // MARK: - Properties
+    // MARK: - Dependencies
 
-    // Cliente que actualmente inició sesión.
+    // Identificador del cliente cuya información
+    // debe mostrar esta pantalla.
+    private let customerId: Int
+
+
+    // BankingService es la fuente central de datos.
     //
-    // Por ahora lo obtenemos desde MockData.
-    // Posteriormente llegará desde nuestro sistema
-    // de autenticación.
-    private(set) var customer: Customer?
-
-    // Cuentas pertenecientes al cliente.
-    private(set) var accounts: [Account] = []
-
-    // Tarjetas de crédito del cliente.
-    private(set) var creditCards: [CreditCard] = []
-
-    // Movimientos pertenecientes a sus cuentas.
-    private(set) var transactions: [Transaction] = []
+    // IMPORTANTE:
+    //
+    // Ya no vamos a COPIAR sus datos a propiedades
+    // almacenadas dentro de HomeViewModel.
+    //
+    // HomeViewModel los consultará directamente.
+    private let bankingService =
+        BankingService.shared
 
 
     // MARK: - Initialization
 
-    // init se ejecuta cuando creamos una instancia
-    // de HomeViewModel.
-
     init(customerId: Int) {
 
-        loadCustomer(customerId: customerId)
-        loadAccounts(customerId: customerId)
-        loadCreditCards(customerId: customerId)
-        loadTransactions()
+        self.customerId = customerId
     }
 
 
-    // MARK: - Total Balance
+    // MARK: - Customer
 
-    // La vista puede solicitar:
+    // Esta es una propiedad calculada.
     //
-    // viewModel.totalBalance
+    // No almacena una segunda copia del cliente.
+    // Cada vez que alguien consulta "customer",
+    // leemos el estado actual de BankingService.
+    var customer: Customer? {
+
+        guard let customer =
+            bankingService.customer,
+              customer.id == customerId
+        else {
+
+            return nil
+        }
+
+        return customer
+    }
+
+
+    // MARK: - Accounts
+
+    // Igual que customer, esta propiedad siempre
+    // consulta el estado actual de BankingService.
     //
-    // sin tener que saber cómo se calcula.
-    var totalBalance: Decimal {
+    // Por eso, si la API cambia un saldo:
+    //
+    // MySQL
+    //   ↓
+    // Spring Boot
+    //   ↓
+    // BankingService
+    //   ↓
+    // accounts
+    //
+    // Home ya no conserva una copia vieja.
+    var accounts: [Account] {
 
-        accounts.reduce(Decimal.zero) { partialResult, account in
+        bankingService.accounts
+            .filter { account in
 
-            partialResult + account.balance
-        }
+                account.customerId == customerId &&
+                account.isActive
+            }
     }
 
 
-    // MARK: - Recent Transactions
+    // MARK: - Credit Cards
 
+    var creditCards: [CreditCard] {
 
-    var recentTransactions: [Transaction] {
+        bankingService.creditCards
+            .filter { card in
 
-        transactions.sorted { firstTransaction, secondTransaction in
-
-            firstTransaction.date > secondTransaction.date
-        }
+                card.customerId == customerId &&
+                card.isActive
+            }
     }
 
 
-    // MARK: - Load Customer
+    // MARK: - Transactions
 
-    private func loadCustomer(customerId: Int) {
+    var transactions: [Transaction] {
 
-        customer = MockData.customers.first { customer in
-
-            customer.id == customerId
-        }
-    }
-
-
-    // MARK: - Load Accounts
-
-    private func loadAccounts(customerId: Int) {
-
-        // Ya no leemos las cuentas directamente desde MockData.
-        //
-        // BankingService.shared contiene el estado actual
-        // de la sesión, incluyendo los cambios producidos
-        // por las transferencias.
-        accounts = BankingService.shared.accounts.filter { account in
-
-            account.customerId == customerId
-        }
-    }
-
-
-    // MARK: - Load Credit Cards
-
-    private func loadCreditCards(customerId: Int) {
-
-        creditCards = MockData.creditCards.filter { card in
-
-            card.customerId == customerId
-        }
-    }
-
-
-    // MARK: - Load Transactions
-
-    private func loadTransactions() {
-
+        // Primero obtenemos los productos actuales
+        // pertenecientes al cliente.
         let accountIds = Set(
             accounts.map { account in
                 account.id
@@ -139,22 +128,21 @@ final class HomeViewModel {
             }
         )
 
-        // CAMBIO IMPORTANTE:
-        //
-        // Los movimientos ahora proceden de BankingService.
-        //
-        // Por tanto, si Transferir acaba de crear un nuevo
-        // movimiento, aquí podremos encontrarlo.
-        transactions =
-            BankingService.shared.transactions.filter { transaction in
 
-                if let accountId = transaction.accountId,
+        // Después conservamos únicamente movimientos
+        // asociados con esos productos.
+        return bankingService.transactions
+            .filter { transaction in
+
+                if let accountId =
+                    transaction.accountId,
                    accountIds.contains(accountId) {
 
                     return true
                 }
 
-                if let creditCardId = transaction.creditCardId,
+                if let creditCardId =
+                    transaction.creditCardId,
                    creditCardIds.contains(creditCardId) {
 
                     return true
@@ -163,21 +151,48 @@ final class HomeViewModel {
                 return false
             }
     }
- 
+
+
+    // MARK: - Total Balance
+
+    var totalBalance: Decimal {
+
+        accounts.reduce(Decimal.zero) {
+            partialResult,
+            account in
+
+            partialResult + account.balance
+        }
+    }
+
+
+    // MARK: - Recent Transactions
+
+    var recentTransactions: [Transaction] {
+
+        transactions.sorted {
+            firstTransaction,
+            secondTransaction in
+
+            firstTransaction.date >
+                secondTransaction.date
+        }
+    }
+
+
     // MARK: - Refresh
 
-    // Vuelve a consultar el estado actual del servicio.
+    // HomeView actualmente llama refresh()
+    // cuando aparece.
     //
-    // La vista podrá llamar esta función cuando aparezca
-    // nuevamente en pantalla.
+    // Ya no necesitamos copiar nada aquí porque todas
+    // las propiedades anteriores leen directamente
+    // BankingService.
+    //
+    // Conservamos temporalmente este método para no
+    // romper la interfaz actual de HomeView.
     func refresh() {
 
-        guard let customer else {
-            return
-        }
-
-        loadAccounts(customerId: customer.id)
-        loadCreditCards(customerId: customer.id)
-        loadTransactions()
+        // Intencionalmente vacío.
     }
 }
