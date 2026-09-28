@@ -12,8 +12,19 @@ struct TransactionsView: View {
 
     // MARK: - View Model
 
-    @State private var viewModel =
-        TransactionsViewModel(customerId: 1)
+    @State private var viewModel:
+        TransactionsViewModel
+
+
+    init(customerId: Int) {
+
+        _viewModel = State(
+            initialValue:
+                TransactionsViewModel(
+                    customerId: customerId
+                )
+        )
+    }
 
 
     // MARK: - Body
@@ -292,5 +303,5 @@ struct TransactionsView: View {
 // MARK: - Preview
 
 #Preview {
-    TransactionsView()
+    TransactionsView(customerId: 1)
 }

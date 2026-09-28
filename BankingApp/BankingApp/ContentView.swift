@@ -2,80 +2,109 @@
 //  ContentView.swift
 //  BankingApp
 //
-//  Vista raíz de la aplicación.
-//
-//  Su responsabilidad es controlar la navegación
-//  principal entre las diferentes secciones.
+//  Contenedor principal de la aplicación.
+//  Muestra las pestañas correspondientes al cliente autenticado.
 //
 
 import SwiftUI
 
+
 struct ContentView: View {
+
+
+    // MARK: - Session
+
+    private let session =
+        SessionManager.shared
+
+
+    // MARK: - Body
 
     var body: some View {
 
-        // TabView crea una navegación por pestañas.
-        //
-        // Cada elemento dentro del TabView representa
-        // una sección principal de nuestra aplicación.
-        TabView {
+        if let customer =
+            session.currentCustomer {
 
+            TabView {
 
-            // MARK: - Home
-
-            HomeView()
+                HomeView(
+                    customerId: customer.id
+                )
                 .tabItem {
 
-                    // SF Symbol utilizado como icono.
-                    Image(systemName: "house.fill")
+                    Image(
+                        systemName: "house.fill"
+                    )
 
-                    // Texto mostrado debajo del icono.
                     Text("Inicio")
                 }
 
 
-            // MARK: - Transactions
-
-            TransactionsView()
+                TransactionsView(
+                    customerId: customer.id
+                )
                 .tabItem {
 
-                    Image(systemName: "list.bullet.rectangle")
+                    Image(
+                        systemName:
+                            "list.bullet.rectangle"
+                    )
 
                     Text("Movimientos")
                 }
 
 
-            // MARK: - Transfer
-
-            TransferView()
+                TransferView(
+                    customerId: customer.id
+                )
                 .tabItem {
 
-                    Image(systemName: "arrow.left.arrow.right")
+                    Image(
+                        systemName:
+                            "arrow.left.arrow.right"
+                    )
 
                     Text("Transferir")
                 }
 
 
-            // MARK: - Analysis
-
-            AnalysisView()
+                AnalysisView(
+                    customerId: customer.id
+                )
                 .tabItem {
 
-                    Image(systemName: "chart.bar.fill")
+                    Image(
+                        systemName:
+                            "chart.bar.fill"
+                    )
 
                     Text("Análisis")
                 }
 
 
-            // MARK: - Profile
+                ProfileView()
+                    .tabItem {
 
-            ProfileView()
-                .tabItem {
+                        Image(
+                            systemName:
+                                "person.crop.circle"
+                        )
 
-                    Image(systemName: "person.crop.circle")
+                        Text("Perfil")
+                    }
+            }
 
-                    Text("Perfil")
-                }
+        } else {
+
+            ContentUnavailableView(
+                "Sin sesión",
+                systemImage:
+                    "person.crop.circle.badge.xmark",
+                description:
+                    Text(
+                        "No existe un cliente autenticado."
+                    )
+            )
         }
     }
 }
@@ -84,5 +113,6 @@ struct ContentView: View {
 // MARK: - Preview
 
 #Preview {
-    ContentView()
+
+    LoginView()
 }

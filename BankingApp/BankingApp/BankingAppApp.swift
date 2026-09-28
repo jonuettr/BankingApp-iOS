@@ -2,16 +2,36 @@
 //  BankingAppApp.swift
 //  BankingApp
 //
-//  Created by Jonuet Trujillo on 27/09/26.
+//  Punto de entrada principal de la aplicación.
 //
 
 import SwiftUI
 
+
 @main
 struct BankingAppApp: App {
+
+
+    // MARK: - Session
+
+    @State private var session =
+        SessionManager.shared
+
+
+    // MARK: - Application
+
     var body: some Scene {
+
         WindowGroup {
-            ContentView()
+
+            if session.isAuthenticated {
+
+                ContentView()
+
+            } else {
+
+                LoginView()
+            }
         }
     }
 }

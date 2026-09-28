@@ -9,9 +9,23 @@ import SwiftUI
 
 struct HomeView: View {
 
+
     // MARK: - View Model
 
-    @State private var viewModel = HomeViewModel(customerId: 1)
+    @State private var viewModel: HomeViewModel
+
+
+    // MARK: - Initialization
+
+    init(customerId: Int) {
+
+        _viewModel = State(
+            initialValue:
+                HomeViewModel(
+                    customerId: customerId
+                )
+        )
+    }
     
     // MARK: - Body
 
@@ -300,5 +314,5 @@ struct HomeView: View {
 // MARK: - Preview
 
 #Preview {
-    HomeView()
+    HomeView(customerId: 1)
 }

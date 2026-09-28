@@ -12,8 +12,19 @@ struct TransferView: View {
 
     // MARK: - View Model
 
-    @State private var viewModel =
-        TransferViewModel(customerId: 1)
+    @State private var viewModel:
+        TransferViewModel
+
+
+    init(customerId: Int) {
+
+        _viewModel = State(
+            initialValue:
+                TransferViewModel(
+                    customerId: customerId
+                )
+        )
+    }
 
 
     // MARK: - State
@@ -495,5 +506,5 @@ struct TransferRiskResultView: View {
 // MARK: - Preview
 
 #Preview {
-    TransferView()
+    TransferView(customerId: 1)
 }
