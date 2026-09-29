@@ -2,8 +2,8 @@
 //  TransactionsViewModel.swift
 //  BankingApp
 //
-//  ViewModel encargado de preparar, buscar y filtrar
-//  los movimientos mostrados en TransactionsView.
+//  Prepara, busca y filtra los movimientos
+//  mostrados en TransactionsView.
 //
 
 import Foundation
@@ -12,22 +12,12 @@ import Observation
 
 // MARK: - Transaction Filter
 
-// Este enum representa los filtros principales
-// disponibles en la pantalla de movimientos.
-//
-// "all"     → todos los movimientos.
-// "income"  → solamente entradas de dinero.
-// "expenses" → solamente salidas de dinero.
 enum TransactionFilter: String, CaseIterable, Identifiable {
 
     case all = "Todos"
     case income = "Ingresos"
     case expenses = "Gastos"
 
-    // Identifiable requiere un id.
-    //
-    // Como cada rawValue es diferente, podemos utilizarlo
-    // como identificador.
     var id: String {
         rawValue
     }
@@ -39,19 +29,25 @@ enum TransactionFilter: String, CaseIterable, Identifiable {
 @Observable
 final class TransactionsViewModel {
 
+
+    // MARK: - Dependencies
+
     private let customerId: Int
 
-    // MARK: - Properties
-
-    // Todos los movimientos pertenecientes al cliente.
-    private(set) var transactions: [Transaction] = []
-
-    // Texto introducido por el usuario en el buscador.
+    // Fuente central de información bancaria.
     //
-    // Esta propiedad sí puede modificarse desde la vista.
+    // Los datos que contiene son sustituidos por
+    // los recibidos desde Spring Boot.
+    private let bankingService =
+        BankingService.shared
+
+
+    // MARK: - User Interface State
+
+    // Estos dos valores sí pertenecen al ViewModel
+    // porque representan decisiones de la interfaz.
     var searchText: String = ""
 
-    // Filtro seleccionado actualmente.
     var selectedFilter: TransactionFilter = .all
 
 
@@ -60,28 +56,81 @@ final class TransactionsViewModel {
     init(customerId: Int) {
 
         self.customerId = customerId
+    }
 
-        loadTransactions(customerId: customerId)
+
+    // MARK: - Transactions
+
+    // Ya NO guardamos una copia local de transactions.
+    //
+    // Cada vez que SwiftUI consulta esta propiedad,
+    // usamos el estado actual de BankingService.
+    var transactions: [Transaction] {
+
+        // Cuentas activas pertenecientes al cliente.
+        let accountIds = Set(
+            bankingService.accounts
+                .filter { account in
+
+                    account.customerId == customerId &&
+                    account.isActive
+                }
+                .map { account in
+                    account.id
+                }
+        )
+
+
+        // Tarjetas activas pertenecientes al cliente.
+        //
+        // IMPORTANTE:
+        // antes esta información venía de MockData.
+        // Ahora proviene de BankingService y, por tanto,
+        // de nuestra REST API.
+        let creditCardIds = Set(
+            bankingService.creditCards
+                .filter { card in
+
+                    card.customerId == customerId &&
+                    card.isActive
+                }
+                .map { card in
+                    card.id
+                }
+        )
+
+
+        // Conservamos únicamente movimientos asociados
+        // con los productos del cliente.
+        return bankingService.transactions
+            .filter { transaction in
+
+                if let accountId =
+                    transaction.accountId,
+                   accountIds.contains(accountId) {
+
+                    return true
+                }
+
+                if let creditCardId =
+                    transaction.creditCardId,
+                   creditCardIds.contains(creditCardId) {
+
+                    return true
+                }
+
+                return false
+            }
     }
 
 
     // MARK: - Filtered Transactions
 
-    // Esta propiedad combina:
-    //
-    // 1. búsqueda por texto
-    // 2. filtro de ingresos/gastos
-    // 3. orden por fecha
-    //
-    // TransactionsView solamente tendrá que pedir:
-    //
-    // viewModel.filteredTransactions
     var filteredTransactions: [Transaction] {
 
         transactions
 
-            // PRIMER FILTRO:
-            // Ingresos, gastos o todos.
+            // Primero aplicamos el filtro seleccionado.
             .filter { transaction in
 
                 switch selectedFilter {
@@ -97,31 +146,31 @@ final class TransactionsViewModel {
                 }
             }
 
-            // SEGUNDO FILTRO:
-            // Búsqueda por descripción, comercio
-            // o referencia.
+            // Después aplicamos la búsqueda.
             .filter { transaction in
 
-                // Si el buscador está vacío,
-                // mostramos el movimiento.
                 guard !searchText.isEmpty else {
                     return true
                 }
 
-                // Buscamos dentro de la descripción.
                 let matchesDescription =
-                    transaction.description.localizedCaseInsensitiveContains(
-                        searchText
-                    )
+                    transaction.description
+                        .localizedCaseInsensitiveContains(
+                            searchText
+                        )
 
                 let matchesMerchant =
                     transaction.merchant?
-                        .localizedCaseInsensitiveContains(searchText)
+                        .localizedCaseInsensitiveContains(
+                            searchText
+                        )
                     ?? false
 
                 let matchesReference =
                     transaction.reference?
-                        .localizedCaseInsensitiveContains(searchText)
+                        .localizedCaseInsensitiveContains(
+                            searchText
+                        )
                     ?? false
 
                 return matchesDescription ||
@@ -129,105 +178,64 @@ final class TransactionsViewModel {
                        matchesReference
             }
 
-            // Finalmente ordenamos de más reciente
-            // a más antiguo.
+            // Finalmente mostramos primero
+            // los movimientos más recientes.
             .sorted { firstTransaction, secondTransaction in
 
-                firstTransaction.date > secondTransaction.date
+                firstTransaction.date >
+                    secondTransaction.date
             }
     }
 
 
     // MARK: - Summary
 
-    // Total de entradas de dinero.
     var totalIncome: Decimal {
 
         transactions
             .filter { transaction in
                 isIncome(transaction)
             }
-            .reduce(Decimal.zero) { result, transaction in
+            .reduce(Decimal.zero) {
+                result,
+                transaction in
+
                 result + transaction.amount
             }
     }
 
-    // Total de salidas.
+
     var totalExpenses: Decimal {
 
         transactions
             .filter { transaction in
                 !isIncome(transaction)
             }
-            .reduce(Decimal.zero) { result, transaction in
+            .reduce(Decimal.zero) {
+                result,
+                transaction in
+
                 result + transaction.amount
             }
     }
 
+
     // MARK: - Refresh
 
-    // Recarga el historial desde BankingService.
-    // Esto permite detectar movimientos creados después
-    // de inicializar este ViewModel.
+    // Se conserva porque TransactionsView actualmente
+    // llama refresh() cuando aparece.
+    //
+    // Ya no necesitamos copiar datos manualmente.
     func refresh() {
-
-        loadTransactions(customerId: customerId)
-    }
-
-    // MARK: - Load Transactions
-
-    private func loadTransactions(customerId: Int) {
-
-        // Obtenemos las cuentas del cliente.
-        let accountIds = Set(
-            BankingService.shared.accounts
-                .filter { account in
-                    account.customerId == customerId
-                }
-                .map { account in
-                    account.id
-                }
-        )
-
-        // Obtenemos sus tarjetas.
-        let creditCardIds = Set(
-            MockData.creditCards
-                .filter { card in
-                    card.customerId == customerId
-                }
-                .map { card in
-                    card.id
-                }
-        )
-
-        // Conservamos los movimientos que pertenezcan
-        // a cualquiera de esos productos.
-        transactions = BankingService.shared.transactions.filter { transaction in
-
-            if let accountId = transaction.accountId,
-               accountIds.contains(accountId) {
-
-                return true
-            }
-
-            if let creditCardId = transaction.creditCardId,
-               creditCardIds.contains(creditCardId) {
-
-                return true
-            }
-
-            return false
-        }
+        // Intencionalmente vacío.
     }
 
 
     // MARK: - Income / Expense
 
-    // Centralizamos aquí la regla que determina
-    // si un movimiento representa entrada de dinero.
-    //
-    // Esto evita repetir la condición muchas veces.
-    func isIncome(_ transaction: Transaction) -> Bool {
+    func isIncome(
+        _ transaction: Transaction
+    ) -> Bool {
 
         transaction.type == .deposit ||
         transaction.type == .transferIn

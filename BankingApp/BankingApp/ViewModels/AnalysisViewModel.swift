@@ -12,7 +12,6 @@ import Observation
 
 // MARK: - Category Summary
 
-// Representa el total gastado en una categoría.
 struct CategorySummary: Identifiable {
 
     var id: TransactionCategory {
@@ -31,14 +30,12 @@ struct CategorySummary: Identifiable {
 final class AnalysisViewModel {
 
 
-    // MARK: - Customer
+    // MARK: - Dependencies
 
     private let customerId: Int
 
-
-    // MARK: - Data
-
-    private(set) var transactions: [Transaction] = []
+    private let bankingService =
+        BankingService.shared
 
 
     // MARK: - Initialization
@@ -46,14 +43,72 @@ final class AnalysisViewModel {
     init(customerId: Int) {
 
         self.customerId = customerId
+    }
 
-        loadTransactions()
+
+    // MARK: - Transactions
+
+    // No almacenamos otra copia del historial.
+    //
+    // Siempre trabajamos con el estado actual
+    // recibido por BankingService.
+    private var transactions: [Transaction] {
+
+        let accountIds = Set(
+            bankingService.accounts
+                .filter { account in
+
+                    account.customerId == customerId &&
+                    account.isActive
+                }
+                .map { account in
+                    account.id
+                }
+        )
+
+
+        let creditCardIds = Set(
+            bankingService.creditCards
+                .filter { card in
+
+                    card.customerId == customerId &&
+                    card.isActive
+                }
+                .map { card in
+                    card.id
+                }
+        )
+
+
+        return bankingService.transactions
+            .filter { transaction in
+
+                if let accountId =
+                    transaction.accountId,
+                   accountIds.contains(accountId) {
+
+                    return true
+                }
+
+                if let creditCardId =
+                    transaction.creditCardId,
+                   creditCardIds.contains(creditCardId) {
+
+                    return true
+                }
+
+                return false
+            }
     }
 
 
     // MARK: - Income
 
-    // Aquí contamos únicamente ingresos financieros reales.
+    // Conservamos la misma regla financiera que
+    // ya utilizaba esta pantalla:
+    //
+    // únicamente "deposit" cuenta como ingreso
+    // para el análisis financiero.
     var totalIncome: Decimal {
 
         transactions
@@ -61,7 +116,9 @@ final class AnalysisViewModel {
 
                 transaction.type == .deposit
             }
-            .reduce(Decimal.zero) { result, transaction in
+            .reduce(Decimal.zero) {
+                result,
+                transaction in
 
                 result + transaction.amount
             }
@@ -74,7 +131,9 @@ final class AnalysisViewModel {
 
         expenseTransactions.reduce(
             Decimal.zero
-        ) { result, transaction in
+        ) {
+            result,
+            transaction in
 
             result + transaction.amount
         }
@@ -83,8 +142,6 @@ final class AnalysisViewModel {
 
     // MARK: - Net Cash Flow
 
-    // Diferencia entre ingresos y gastos
-    // considerados por nuestro análisis.
     var netCashFlow: Decimal {
 
         totalIncome - totalExpenses
@@ -93,8 +150,11 @@ final class AnalysisViewModel {
 
     // MARK: - Expense Transactions
 
-    // Centralizamos la definición de "gasto"
-    // para no repetir la regla en diferentes cálculos.
+    // Para análisis financiero solamente consideramos
+    // compras y cargos domiciliados como gasto.
+    //
+    // Las transferencias y pagos de tarjeta no se
+    // contabilizan aquí como consumo.
     private var expenseTransactions: [Transaction] {
 
         transactions.filter { transaction in
@@ -109,8 +169,6 @@ final class AnalysisViewModel {
 
     var expensesByCategory: [CategorySummary] {
 
-        // Dictionary(grouping:) agrupa los movimientos
-        // que comparten una misma categoría.
         let groupedTransactions =
             Dictionary(
                 grouping: expenseTransactions
@@ -120,7 +178,6 @@ final class AnalysisViewModel {
             }
 
 
-        // Convertimos cada grupo en CategorySummary.
         let summaries =
             groupedTransactions.map {
                 category,
@@ -129,7 +186,9 @@ final class AnalysisViewModel {
                 let total =
                     transactions.reduce(
                         Decimal.zero
-                    ) { result, transaction in
+                    ) {
+                        result,
+                        transaction in
 
                         result + transaction.amount
                     }
@@ -141,8 +200,6 @@ final class AnalysisViewModel {
             }
 
 
-        // Mostramos primero las categorías
-        // con mayor gasto.
         return summaries.sorted {
             first,
             second in
@@ -154,8 +211,6 @@ final class AnalysisViewModel {
 
     // MARK: - Expense Percentage
 
-    // Calcula qué porcentaje del gasto total
-    // corresponde a una categoría.
     func expensePercentage(
         for amount: Decimal
     ) -> Decimal {
@@ -170,76 +225,17 @@ final class AnalysisViewModel {
 
     // MARK: - Refresh
 
+    // Se conserva para mantener compatible AnalysisView.
+    //
+    // Como los cálculos ahora consultan directamente
+    // BankingService, no necesitamos recargar una copia.
     func refresh() {
-
-        loadTransactions()
-    }
-
-
-    // MARK: - Load Transactions
-
-    private func loadTransactions() {
-
-        // Obtenemos las cuentas actuales del cliente
-        // desde BankingService.
-        let accountIds = Set(
-            BankingService.shared.accounts
-                .filter { account in
-
-                    account.customerId == customerId
-                }
-                .map { account in
-
-                    account.id
-                }
-        )
-
-
-        // Las tarjetas todavía proceden de MockData.
-        let creditCardIds = Set(
-            MockData.creditCards
-                .filter { card in
-
-                    card.customerId == customerId
-                }
-                .map { card in
-
-                    card.id
-                }
-        )
-
-
-        // Seleccionamos todos los movimientos
-        // pertenecientes a esos productos.
-        transactions =
-            BankingService.shared.transactions.filter {
-                transaction in
-
-                if let accountId =
-                    transaction.accountId,
-                   accountIds.contains(accountId) {
-
-                    return true
-                }
-
-
-                if let creditCardId =
-                    transaction.creditCardId,
-                   creditCardIds.contains(creditCardId) {
-
-                    return true
-                }
-
-
-                return false
-            }
+        // Intencionalmente vacío.
     }
 
 
     // MARK: - Category Name
 
-    // Traducimos nuestros valores internos
-    // a nombres apropiados para la interfaz.
     func categoryName(
         _ category: TransactionCategory
     ) -> String {

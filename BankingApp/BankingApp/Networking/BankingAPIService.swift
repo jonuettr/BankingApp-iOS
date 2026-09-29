@@ -108,4 +108,51 @@ actor BankingAPIService {
             try dto.toDomain()
         }
     }
+// MARK: - Beneficiaries
+
+
+func fetchBeneficiaries(
+    customerId: Int
+) async throws -> [Beneficiary] {
+
+    let dtos =
+        try await apiClient.get(
+            path:
+                "/api/customers/\(customerId)/beneficiaries",
+            as: [BeneficiaryDTO].self
+        )
+
+    return dtos.map { dto in
+        dto.toDomain()
+    }
+}
+
+// MARK: - Create Transfer
+
+func createTransfer(
+    sourceAccountId: Int,
+    beneficiaryId: Int,
+    amount: Decimal,
+    concept: String,
+    reference: String?,
+    deviceIdentifier: String
+) async throws -> TransferResponseDTO {
+
+    let request =
+        TransferRequestDTO(
+            sourceAccountId: sourceAccountId,
+            beneficiaryId: beneficiaryId,
+            amount: amount,
+            concept: concept,
+            reference: reference,
+            deviceIdentifier:
+                deviceIdentifier
+        )
+
+return try await apiClient.post(
+    path: "/api/transfers",
+    body: request,
+    as: TransferResponseDTO.self
+)
+}
 }

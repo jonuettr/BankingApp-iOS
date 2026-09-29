@@ -207,6 +207,10 @@ struct TransferView: View {
                     viewModel: viewModel
                 )
             }
+            .task {
+
+                await viewModel.loadData()
+            }
         }
     }
 
@@ -350,7 +354,7 @@ struct TransferRiskResultView: View {
                         } else {
 
                             Label(
-                                "Operación autorizada para continuar",
+                                "Operación autorizada",
                                 systemImage:
                                     "checkmark.circle.fill"
                             )
@@ -410,23 +414,36 @@ struct TransferRiskResultView: View {
                 Button {
 
                     // Aquí ocurre la transferencia real.
-                    if viewModel.executeTransfer() {
+                    Task {
 
-                        showReceipt = true
+                        let success =
+                            await viewModel.executeTransfer()
+
+                        if success {
+
+                            showReceipt = true
+                        }
                     }
-
                 } label: {
 
                     HStack {
 
                         Spacer()
 
-                        Text("Confirmar transferencia")
-                            .fontWeight(.semibold)
+                        if viewModel.isExecuting {
+
+                            ProgressView()
+
+                        } else {
+
+                            Text("Confirmar transferencia")
+                                .fontWeight(.semibold)
+                        }
 
                         Spacer()
                     }
                 }
+                .disabled(viewModel.isExecuting)
                 .buttonStyle(.borderedProminent)
                 .controlSize(.large)
 

@@ -7,14 +7,23 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 import java.util.Optional;
 
+
 public interface BeneficiaryRepository
         extends JpaRepository<Beneficiary, Integer> {
 
-    List<Beneficiary>
-    findByOwnerCustomerIdAndActiveTrue(Integer ownerCustomerId);
-
+    // Busca un beneficiario activo específico
+    // y verifica que pertenezca al cliente.
     Optional<Beneficiary>
     findByIdAndOwnerCustomerIdAndActiveTrue(
             Integer id,
-            Integer ownerCustomerId);
+            Integer ownerCustomerId
+    );
+
+
+    // Obtiene todos los beneficiarios activos
+    // guardados por un cliente.
+    List<Beneficiary>
+    findByOwnerCustomerIdAndActiveTrue(
+            Integer ownerCustomerId
+    );
 }

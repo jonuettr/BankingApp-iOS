@@ -181,41 +181,139 @@ nonisolated struct TransactionDTO: Decodable, Sendable {
 
 // MARK: - API Date Parser
 
-nonisolated enum APIDateParserError: Error {
+enum APIDateParserError: Error {
 
     case invalidDate(String)
 }
 
 
-nonisolated struct APIDateParser {
+nonisolated enum APIDateParser {
 
     static func parse(
         _ value: String
     ) throws -> Date {
 
-
-        let formatter = DateFormatter()
-        
-        formatter.locale =
-            Locale(identifier: "en_US_POSIX")
-
-        formatter.timeZone =
-            TimeZone(
-                identifier: "America/Mexico_City"
-            )
-
-        formatter.dateFormat =
+        let formats = [
+            "yyyy-MM-dd'T'HH:mm:ss.SSSSSS",
+            "yyyy-MM-dd'T'HH:mm:ss.SSS",
             "yyyy-MM-dd'T'HH:mm:ss"
+        ]
 
-        guard let date =
-                formatter.date(from: value)
-        else {
 
-            throw APIDateParserError.invalidDate(
-                value
-            )
+        for format in formats {
+
+            let formatter = DateFormatter()
+
+            formatter.locale =
+                Locale(identifier: "en_US_POSIX")
+
+            formatter.timeZone =
+                TimeZone(
+                    identifier:
+                        "America/Mexico_City"
+                )
+
+            formatter.dateFormat = format
+
+
+            if let date =
+                formatter.date(from: value) {
+
+                return date
+            }
         }
 
-        return date
+
+        throw APIDateParserError
+            .invalidDate(value)
+    }
+}
+
+// MARK: - Beneficiary DTO
+
+nonisolated struct BeneficiaryDTO:
+    Decodable,
+    Sendable {
+
+    let id: Int
+    let ownerCustomerId: Int
+    let name: String
+    let bankName: String
+    let clabe: String
+    let destinationCustomerId: Int?
+    let destinationAccountId: Int?
+    let active: Bool
+
+    func toDomain() -> Beneficiary {
+
+        Beneficiary(
+            id: id,
+            ownerCustomerId: ownerCustomerId,
+            name: name,
+            bankName: bankName,
+            clabe: clabe,
+            destinationCustomerId:
+                destinationCustomerId,
+            destinationAccountId:
+                destinationAccountId,
+            isActive: active
+        )
+    }
+}
+
+
+// MARK: - Transfer Request DTO
+
+// Encodable porque Swift lo enviará como JSON
+// hacia Spring Boot.
+nonisolated struct TransferRequestDTO:
+    Encodable,
+    Sendable {
+
+    let sourceAccountId: Int
+    let beneficiaryId: Int
+    let amount: Decimal
+    let concept: String
+    let reference: String?
+    let deviceIdentifier: String
+}
+
+
+// MARK: - Transfer Response DTO
+
+// Esta es exactamente la respuesta que recibiremos
+// después de que Spring Boot procese la transferencia.
+nonisolated struct TransferResponseDTO:
+    Decodable,
+    Sendable {
+
+    let id: Int
+    let sourceAccountId: Int
+    let beneficiaryId: Int
+    let amount: Decimal
+    let concept: String
+    let reference: String?
+    let status: TransferStatus
+    let createdAt: String
+
+    let riskScore: Int
+    let riskLevel: RiskLevel
+    let requiresVerification: Bool
+    let riskReasons: [String]
+
+    func toDomain() throws -> Transfer {
+
+        Transfer(
+            id: id,
+            sourceAccountId: sourceAccountId,
+            beneficiaryId: beneficiaryId,
+            amount: amount,
+            concept: concept,
+            reference: reference,
+            status: status,
+            createdAt:
+                try APIDateParser.parse(createdAt),
+            completedAt: nil
+        )
     }
 }
