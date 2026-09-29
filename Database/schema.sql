@@ -521,3 +521,39 @@ CREATE TABLE RISK_REASON (
         FOREIGN KEY (id_risk_evaluation)
         REFERENCES RISK_EVALUATION(id_risk_evaluation)
 );
+-- =========================================================
+-- AUTH_CREDENTIAL
+-- =========================================================
+-- Almacena las credenciales utilizadas para autenticación.
+--
+-- IMPORTANTE:
+-- Nunca almacenamos la contraseña original.
+-- password_hash contendrá únicamente el hash generado
+-- mediante BCrypt.
+--
+-- La relación con CUSTOMER es 1:1.
+-- =========================================================
+
+CREATE TABLE AUTH_CREDENTIAL (
+
+    id_credential INT AUTO_INCREMENT PRIMARY KEY,
+
+    id_customer INT NOT NULL,
+
+    password_hash VARCHAR(255) NOT NULL,
+
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    updated_at TIMESTAMP NOT NULL
+        DEFAULT CURRENT_TIMESTAMP
+        ON UPDATE CURRENT_TIMESTAMP,
+
+    CONSTRAINT uq_auth_customer
+        UNIQUE (id_customer),
+
+    CONSTRAINT fk_auth_customer
+        FOREIGN KEY (id_customer)
+        REFERENCES CUSTOMER(id_customer)
+);

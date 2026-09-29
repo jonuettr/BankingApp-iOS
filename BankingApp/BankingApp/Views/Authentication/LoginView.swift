@@ -2,11 +2,7 @@
 //  LoginView.swift
 //  BankingApp
 //
-//  Pantalla inicial de autenticación.
-//
-//  Permite iniciar sesión manualmente con clientes
-//  ficticios y utilizar Face ID / Touch ID cuando
-//  el usuario previamente habilitó la biometría.
+//  Inicio de sesión real contra Spring Boot.
 //
 
 import SwiftUI
@@ -14,37 +10,25 @@ import SwiftUI
 
 struct LoginView: View {
 
-
-    // MARK: - Session
+    // MARK: Session
 
     private let session =
         SessionManager.shared
 
 
-    // MARK: - Login State
+    // MARK: Login State
 
-    // Cliente seleccionado para el login manual.
-    @State private var selectedCustomerId = 1
+    @State private var email =
+        "alex.rivera@bankingapp.test"
 
-    // Mensaje mostrado cuando ocurre algún error.
-    @State private var errorMessage: String?
+    @State private var password =
+        ""
 
-
-    // MARK: - Biometrics
-
-
-    @State private var biometricAuth =
-        BiometricAuthService()
+    @State private var errorMessage:
+        String?
 
 
-    @State private var biometricSettings =
-        BiometricSettings.shared
-
-    @State private var isAuthenticatingWithBiometrics =
-        false
-
-
-    // MARK: - Body
+    // MARK: Body
 
     var body: some View {
 
@@ -55,7 +39,7 @@ struct LoginView: View {
                 VStack(spacing: 28) {
 
 
-                    // MARK: - Header
+                    // MARK: Header
 
                     VStack(spacing: 16) {
 
@@ -76,169 +60,56 @@ struct LoginView: View {
                         Text(
                             "Banca digital de demostración"
                         )
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(
+                            .secondary
+                        )
                     }
                     .padding(.top, 50)
 
 
-                    // MARK: - Biometric Login
-
-                    if canUseBiometricLogin,
-                       let customer =
-                        biometricCustomer {
-
-                        VStack(spacing: 14) {
-
-                            Text(
-                                "Continuar como"
-                            )
-                            .font(.subheadline)
-                            .foregroundStyle(
-                                .secondary
-                            )
-
-
-                            Text(
-                                customer.fullName
-                            )
-                            .font(.title3)
-                            .fontWeight(
-                                .semibold
-                            )
-
-
-                            Button {
-
-                                authenticateWithBiometrics()
-
-                            } label: {
-
-                                HStack {
-
-                                    if isAuthenticatingWithBiometrics {
-
-                                        ProgressView()
-
-                                    } else {
-
-                                        Image(
-                                            systemName:
-                                                biometricAuth
-                                                .biometricType
-                                                .systemImage
-                                        )
-                                    }
-
-
-                                    Text(
-                                        "Continuar con \(biometricAuth.biometricType.displayName)"
-                                    )
-                                    .fontWeight(
-                                        .semibold
-                                    )
-                                }
-                                .frame(
-                                    maxWidth:
-                                        .infinity
-                                )
-                            }
-                            .buttonStyle(
-                                .borderedProminent
-                            )
-                            .controlSize(.large)
-                            .disabled(
-                                isAuthenticatingWithBiometrics
-                            )
-
-                            HStack {
-
-                                Rectangle()
-                                    .frame(
-                                        height: 1
-                                    )
-                                    .foregroundStyle(
-                                        Color.secondary
-                                            .opacity(0.3)
-                                    )
-
-
-                                Text("o")
-                                    .font(.caption)
-                                    .foregroundStyle(
-                                        .secondary
-                                    )
-
-
-                                Rectangle()
-                                    .frame(
-                                        height: 1
-                                    )
-                                    .foregroundStyle(
-                                        Color.secondary
-                                            .opacity(0.3)
-                                    )
-                            }
-                        }
-                    }
-
-
-                    // MARK: - Manual Login
+                    // MARK: Credentials
 
                     VStack(
                         alignment: .leading,
-                        spacing: 12
+                        spacing: 16
                     ) {
 
-                        Text("Cliente")
+                        Text("Correo")
                             .font(.headline)
 
 
-                        Picker(
-                            "Cliente",
-                            selection:
-                                $selectedCustomerId
-                        ) {
-
-                            ForEach(
-                                MockData.customers
-                            ) { customer in
-
-                                Text(
-                                    customer.fullName
-                                )
-                                .tag(
-                                    customer.id
-                                )
-                            }
-                        }
-                        .pickerStyle(.menu)
-
-                        if let customer =
-                            selectedCustomer {
-
-                            HStack {
-
-                                Image(
-                                    systemName:
-                                        "envelope.fill"
-                                )
+                        TextField(
+                            "correo@ejemplo.com",
+                            text: $email
+                        )
+                        .textInputAutocapitalization(
+                            .never
+                        )
+                        .keyboardType(
+                            .emailAddress
+                        )
+                        .autocorrectionDisabled()
+                        .textFieldStyle(
+                            .roundedBorder
+                        )
 
 
-                                Text(
-                                    customer.email
-                                )
-                            }
-                            .font(.subheadline)
-                            .foregroundStyle(
-                                .secondary
-                            )
-                        }
+                        Text("Contraseña")
+                            .font(.headline)
+
+
+                        SecureField(
+                            "Contraseña",
+                            text: $password
+                        )
+                        .textContentType(
+                            .password
+                        )
+                        .textFieldStyle(
+                            .roundedBorder
+                        )
                     }
                     .padding()
-                    .frame(
-                        maxWidth: .infinity,
-                        alignment: .leading
-                    )
                     .background(
                         Color(
                             .secondarySystemBackground
@@ -251,7 +122,7 @@ struct LoginView: View {
                     )
 
 
-                    // MARK: - Error
+                    // MARK: Error
 
                     if let errorMessage {
 
@@ -264,11 +135,11 @@ struct LoginView: View {
                     }
 
 
-                    // MARK: - Manual Login Button
+                    // MARK: Login Button
 
                     Button {
 
-                        login()
+                        performLogin()
 
                     } label: {
 
@@ -277,12 +148,19 @@ struct LoginView: View {
                             Spacer()
 
 
-                            Text(
-                                "Iniciar sesión"
-                            )
-                            .fontWeight(
-                                .semibold
-                            )
+                            if session.isLoggingIn {
+
+                                ProgressView()
+
+                            } else {
+
+                                Text(
+                                    "Iniciar sesión"
+                                )
+                                .fontWeight(
+                                    .semibold
+                                )
+                            }
 
 
                             Spacer()
@@ -292,15 +170,47 @@ struct LoginView: View {
                         .borderedProminent
                     )
                     .controlSize(.large)
+                    .disabled(
+                        session.isLoggingIn
+                        || email.isEmpty
+                        || password.isEmpty
+                    )
 
 
-                    // MARK: - Demo Notice
+                    // MARK: Demo Credentials
+
+                    VStack(spacing: 4) {
+
+                        Text(
+                            "Cuenta de demostración"
+                        )
+                        .fontWeight(
+                            .semibold
+                        )
+
+
+                        Text(
+                            "alex.rivera@bankingapp.test"
+                        )
+
+
+                        Text(
+                            "BankingDemo2026!"
+                        )
+                    }
+                    .font(.caption)
+                    .foregroundStyle(
+                        .secondary
+                    )
+
 
                     Text(
                         "Proyecto demostrativo. No utiliza información bancaria real."
                     )
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(
+                        .secondary
+                    )
                     .multilineTextAlignment(
                         .center
                     )
@@ -312,133 +222,27 @@ struct LoginView: View {
     }
 
 
-    // MARK: - Selected Customer
+    // MARK: - Login
 
-    private var selectedCustomer: Customer? {
+    private func performLogin() {
 
-        MockData.customers.first {
-            customer in
-
-            customer.id ==
-                selectedCustomerId
-        }
-    }
-
-
-    // MARK: - Biometric Customer
-
-    private var biometricCustomer: Customer? {
-
-        guard
-            biometricSettings.isEnabled,
-            let customerId =
-                biometricSettings.customerId
-        else {
-
-            return nil
-        }
-
-
-        return MockData.customers.first {
-            customer in
-
-            customer.id ==
-                customerId
-        }
-    }
-
-
-    // MARK: - Biometric Availability
-
-    private var canUseBiometricLogin: Bool {
-
-        biometricSettings.isEnabled &&
-        biometricAuth.isAvailable &&
-        biometricCustomer != nil
-    }
-
-
-    // MARK: - Manual Login
-
-    private func login() {
-
-        errorMessage = nil
-
-
-        let success =
-            session.login(
-                customerId:
-                    selectedCustomerId
-            )
-
-
-        if !success {
-
-            errorMessage =
-                "No fue posible iniciar sesión."
-        }
-    }
-
-
-    // MARK: - Biometric Login
-
-    private func authenticateWithBiometrics() {
-
-        guard
-            !isAuthenticatingWithBiometrics
-        else {
-
-            return
-        }
-
-        guard let customer =
-            biometricCustomer
-        else {
-
-            errorMessage =
-                "No existe un cliente asociado a la autenticación biométrica."
-
-            return
-        }
-
-
-        isAuthenticatingWithBiometrics =
-            true
-
-        errorMessage = nil
+        errorMessage =
+            nil
 
 
         Task {
 
-            let success =
-                await biometricAuth
-                    .authenticate()
+            do {
 
-
-            isAuthenticatingWithBiometrics =
-                false
-
-
-            guard success else {
-
-                errorMessage =
-                    biometricAuth.errorMessage
-                    ?? "No fue posible verificar tu identidad."
-
-                return
-            }
-
-            let loginSuccess =
-                session.login(
-                    customerId:
-                        customer.id
+                try await session.login(
+                    email: email,
+                    password: password
                 )
 
-
-            if !loginSuccess {
+            } catch {
 
                 errorMessage =
-                    "No fue posible recuperar la sesión del cliente."
+                    error.localizedDescription
             }
         }
     }

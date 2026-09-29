@@ -11,26 +11,42 @@ import SwiftUI
 @main
 struct BankingAppApp: App {
 
-
-    // MARK: - Session
-
+    // SessionManager es compartido por toda la app.
     @State private var session =
         SessionManager.shared
 
-
-    // MARK: - Application
 
     var body: some Scene {
 
         WindowGroup {
 
-            if session.isAuthenticated {
+            Group {
 
-                ContentView()
+                // Mientras comprobamos si existe una
+                // sesión anterior válida, evitamos mostrar
+                // momentáneamente la pantalla de Login.
+                if session.isRestoringSession {
 
-            } else {
+                    ProgressView(
+                        "Verificando sesión..."
+                    )
 
-                LoginView()
+                } else if session.isAuthenticated {
+
+                    ContentView()
+
+                } else {
+
+                    LoginView()
+                }
+            }
+
+            // Al iniciar la interfaz intentamos recuperar
+            // una sesión anterior exactamente una vez.
+            .task {
+
+                await session
+                    .restoreSessionIfPossible()
             }
         }
     }

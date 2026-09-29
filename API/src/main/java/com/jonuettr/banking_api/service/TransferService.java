@@ -3,7 +3,7 @@ package com.jonuettr.banking_api.service;
 import com.jonuettr.banking_api.dto.RiskAssessment;
 import com.jonuettr.banking_api.dto.TransferRequest;
 import com.jonuettr.banking_api.dto.TransferResponse;
-
+import com.jonuettr.banking_api.exception.ForbiddenTransferException;
 import com.jonuettr.banking_api.entity.Account;
 import com.jonuettr.banking_api.entity.BankTransaction;
 import com.jonuettr.banking_api.entity.Beneficiary;
@@ -55,9 +55,9 @@ public class TransferService {
 
 
     @Transactional
-    public TransferResponse createTransfer(
-            TransferRequest request) {
-
+public TransferResponse createTransfer(
+        TransferRequest request,
+        Integer authenticatedCustomerId) {
         // Usaremos exactamente el mismo instante para
         // evaluar y registrar esta operación.
         LocalDateTime now = LocalDateTime.now();
@@ -77,7 +77,25 @@ public class TransferService {
                                         "Source account does not exist"
                                 )
                         );
+// -----------------------------------------------------
+// AUTORIZACIÓN DEL PROPIETARIO
+// -----------------------------------------------------
 
+// sourceAccountId sí viene del cliente iOS,
+// por lo que no podemos confiar en él para determinar
+// quién tiene derecho a utilizar esa cuenta.
+//
+// authenticatedCustomerId, en cambio, proviene del JWT
+// previamente verificado por el backend.
+if (!sourceAccount
+        .getCustomerId()
+        .equals(authenticatedCustomerId)) {
+
+    throw new ForbiddenTransferException(
+            "Source account does not belong "
+                    + "to authenticated customer"
+    );
+}
 
         // -----------------------------------------------------
         // 2. VALIDAR CUENTA ORIGEN
