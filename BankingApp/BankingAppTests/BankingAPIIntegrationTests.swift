@@ -5,6 +5,18 @@
 //  Pruebas de integración entre la aplicación iOS
 //  y nuestra API REST construida con Spring Boot.
 //
+//  Estas pruebas utilizan autenticación REAL:
+//
+//  credenciales
+//      ↓
+//  POST /api/auth/login
+//      ↓
+//  JWT
+//      ↓
+//  Keychain
+//      ↓
+//  endpoints protegidos
+//
 
 import Foundation
 import Testing
@@ -18,13 +30,64 @@ import Testing
 @Suite("Banking API Integration Tests", .serialized)
 struct BankingAPIIntegrationTests {
 
+    // Credenciales exclusivas de nuestro entorno demo.
+    //
+    // IMPORTANTE:
+    // estas NO son credenciales de producción.
+    private let demoEmail =
+        "alex.rivera@bankingapp.test"
+
+    private let demoPassword =
+        "BankingDemo2026!"
+
+
+    // MARK: - Authentication Helper
+
+    // Cada prueba obtiene un JWT real del backend.
+    //
+    // Después guardamos ese token en Keychain porque
+    // APIClient lo recupera automáticamente para construir:
+    //
+    // Authorization: Bearer <JWT>
+    private func authenticate() async throws {
+
+        let response =
+            try await AuthAPIService.shared.login(
+                email: demoEmail,
+                password: demoPassword
+            )
+
+        try KeychainService.shared.saveAccessToken(
+            response.accessToken
+        )
+    }
+
+
+    // MARK: - Cleanup
+
+    // Eliminamos el JWT después de cada prueba.
+    //
+    // De esta manera una prueba no depende del estado
+    // dejado por otra.
+    private func removeAuthentication() {
+
+        KeychainService.shared.deleteAccessToken()
+    }
+
 
     // MARK: - Customer
 
-    @Test("Fetch customer from REST API")
+    @Test("Login and fetch customer from protected REST API")
     func fetchCustomer() async throws {
 
-        let service = BankingAPIService.shared
+        try await authenticate()
+
+        defer {
+            removeAuthentication()
+        }
+
+        let service =
+            BankingAPIService.shared
 
         let customer =
             try await service.fetchCustomer(
@@ -32,24 +95,29 @@ struct BankingAPIIntegrationTests {
             )
 
         #expect(customer.id == 1)
-
         #expect(customer.firstName == "Alex")
-
         #expect(customer.lastName == "Rivera")
 
         #expect(
             customer.email ==
-            "alex.rivera@bankingapp.test"
+                "alex.rivera@bankingapp.test"
         )
     }
 
 
     // MARK: - Accounts
 
-    @Test("Fetch customer accounts from REST API")
+    @Test("Login and fetch protected customer accounts")
     func fetchAccounts() async throws {
 
-        let service = BankingAPIService.shared
+        try await authenticate()
+
+        defer {
+            removeAuthentication()
+        }
+
+        let service =
+            BankingAPIService.shared
 
         let accounts =
             try await service.fetchAccounts(
@@ -83,10 +151,17 @@ struct BankingAPIIntegrationTests {
 
     // MARK: - Credit Cards
 
-    @Test("Fetch credit cards from REST API")
+    @Test("Login and fetch protected credit cards")
     func fetchCreditCards() async throws {
 
-        let service = BankingAPIService.shared
+        try await authenticate()
+
+        defer {
+            removeAuthentication()
+        }
+
+        let service =
+            BankingAPIService.shared
 
         let cards =
             try await service.fetchCreditCards(
@@ -103,18 +178,26 @@ struct BankingAPIIntegrationTests {
 
     // MARK: - Transactions
 
-    @Test("Fetch transaction history from REST API")
+    @Test("Login and fetch protected transaction history")
     func fetchTransactions() async throws {
 
-        let service = BankingAPIService.shared
+        try await authenticate()
+
+        defer {
+            removeAuthentication()
+        }
+
+        let service =
+            BankingAPIService.shared
 
         let transactions =
             try await service.fetchTransactions(
                 customerId: 1
             )
 
-        #expect(transactions.isEmpty == false)
-
+        #expect(
+            transactions.isEmpty == false
+        )
 
         #expect(
             transactions.contains {
@@ -122,12 +205,10 @@ struct BankingAPIIntegrationTests {
             }
         )
 
-
         #expect(
             transactions.contains {
                 $0.creditCardId != nil
             }
         )
-
     }
 }

@@ -63,20 +63,25 @@ public TransferResponse createTransfer(
         LocalDateTime now = LocalDateTime.now();
 
 
-        // -----------------------------------------------------
-        // 1. OBTENER Y BLOQUEAR CUENTA ORIGEN
-        // -----------------------------------------------------
+// -----------------------------------------------------
+// 1. OBTENER CUENTA ORIGEN PARA VALIDACIONES INICIALES
+// -----------------------------------------------------
 
-        Account sourceAccount =
-                accountService
-                        .getAccountByIdForUpdate(
-                                request.getSourceAccountId()
+// Todavía NO adquirimos un bloqueo.
+//
+// Primero necesitamos conocer también la cuenta destino.
+// Después bloquearemos ambas cuentas siempre en el mismo
+// orden para reducir el riesgo de deadlocks.
+Account sourceAccount =
+        accountService
+                .getAccountById(
+                        request.getSourceAccountId()
+                )
+                .orElseThrow(() ->
+                        new InvalidTransferException(
+                                "Source account does not exist"
                         )
-                        .orElseThrow(() ->
-                                new InvalidTransferException(
-                                        "Source account does not exist"
-                                )
-                        );
+                );
 // -----------------------------------------------------
 // AUTORIZACIÓN DEL PROPIETARIO
 // -----------------------------------------------------
@@ -164,23 +169,94 @@ if (!sourceAccount
         }
 
 
-        // -----------------------------------------------------
-        // 6. OBTENER Y BLOQUEAR CUENTA DESTINO
-        // -----------------------------------------------------
+// -----------------------------------------------------
+// 6. BLOQUEAR AMBAS CUENTAS EN ORDEN DETERMINISTA
+// -----------------------------------------------------
 
-        Account destinationAccount =
-                accountService
-                        .getAccountByIdForUpdate(
-                                beneficiary
-                                        .getDestinationAccountId()
+Integer sourceAccountId =
+        sourceAccount.getId();
+
+Integer destinationAccountId =
+        beneficiary.getDestinationAccountId();
+
+// Siempre adquirimos los locks por ID ascendente.
+//
+// Ejemplo:
+//
+// 101 -> 201 = bloquea 101 y después 201
+// 201 -> 101 = también bloquea 101 y después 201
+//
+// Así evitamos que dos transferencias opuestas
+// mantengan cada una un lock mientras esperan el otro.
+Integer firstAccountId =
+        Math.min(
+                sourceAccountId,
+                destinationAccountId
+        );
+
+Integer secondAccountId =
+        Math.max(
+                sourceAccountId,
+                destinationAccountId
+        );
+
+Account firstLockedAccount =
+        accountService
+                .getAccountByIdForUpdate(
+                        firstAccountId
+                )
+                .orElseThrow(() ->
+                        new InvalidTransferException(
+                                "Account does not exist"
                         )
-                        .orElseThrow(() ->
-                                new InvalidTransferException(
-                                        "Destination account "
-                                                + "does not exist"
-                                )
-                        );
+                );
 
+Account secondLockedAccount =
+        accountService
+                .getAccountByIdForUpdate(
+                        secondAccountId
+                )
+                .orElseThrow(() ->
+                        new InvalidTransferException(
+                                "Account does not exist"
+                        )
+                );
+
+// Después de adquirir ambos locks recuperamos cuál
+// corresponde al origen y cuál al destino.
+sourceAccount =
+        sourceAccountId.equals(firstAccountId)
+                ? firstLockedAccount
+                : secondLockedAccount;
+
+Account destinationAccount =
+        destinationAccountId.equals(firstAccountId)
+                ? firstLockedAccount
+                : secondLockedAccount;
+
+// MUY IMPORTANTE:
+//
+// Las validaciones realizadas antes de adquirir los locks
+// pudieron basarse en un saldo que cambió mientras
+// esperábamos.
+//
+// Por eso las validaciones críticas que dependen del estado
+// actual de la cuenta se realizan nuevamente bajo lock.
+if (!Boolean.TRUE.equals(
+        sourceAccount.getActive())) {
+
+    throw new InvalidTransferException(
+            "Source account is not active"
+    );
+}
+
+if (request.getAmount()
+        .compareTo(sourceAccount.getBalance()) > 0) {
+
+    throw new InsufficientFundsException(
+            "Insufficient funds"
+    );
+}
 
         if (!Boolean.TRUE.equals(
                 destinationAccount.getActive())) {

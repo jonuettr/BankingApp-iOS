@@ -128,9 +128,8 @@ final class TransferViewModel {
 
         } catch {
 
-            executionErrorMessage =
-                "No fue posible cargar los beneficiarios."
-        }
+executionErrorMessage =
+    APIErrorHandler.handle(error)        }
     }
 
 
@@ -400,12 +399,17 @@ final class TransferViewModel {
 
         } catch {
 
-            // El usuario recibe un mensaje sencillo.
-            // Los detalles técnicos permanecen en la consola
-            // para facilitar la depuración durante desarrollo.
+            // Convertimos el error técnico en un mensaje
+            // apropiado para la interfaz.
+            //
+            // Si recibimos un 401, el manejador también
+            // invalida la sesión, elimina el JWT y hace
+            // que la aplicación vuelva al Login.
             executionErrorMessage =
-                "No fue posible procesar la transferencia. Inténtalo nuevamente."
+                APIErrorHandler.handle(error)
 
+            // Durante desarrollo conservamos el error
+            // técnico en la consola para poder depurarlo.
             print(
                 "TRANSFER ERROR:",
                 error
