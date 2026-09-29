@@ -13,20 +13,12 @@ import Foundation
 @MainActor
 enum APIErrorHandler {
 
-    // Procesa un error recibido desde la capa de red.
-    //
-    // Si el servidor responde 401 significa que el JWT
-    // ya no autoriza al usuario. En ese caso eliminamos
-    // la sesión local.
-    //
-    // Como BankingAppApp observa SessionManager,
-    // currentCustomer = nil provoca automáticamente:
-    //
-    // Home -> Login
     static func handle(
-        _ error: Error,
-        session: SessionManager = .shared
+        _ error: Error
     ) -> String {
+
+        let session =
+            SessionManager.shared
 
         guard let apiError = error as? APIError else {
             return messageForNetworkError(error)

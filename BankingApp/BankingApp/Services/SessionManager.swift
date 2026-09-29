@@ -152,7 +152,6 @@ final class SessionManager {
     // MARK: - Restore Session
 
     func restoreSessionIfPossible() async {
-
         // Esta comprobación solamente debe hacerse
         // una vez durante este arranque de la app.
         guard !didAttemptSessionRestore
@@ -176,6 +175,8 @@ final class SessionManager {
         }
 
 
+        // Primero comprobamos si realmente existe
+        // un JWT guardado en Keychain.
         // Primero comprobamos si realmente existe
         // un JWT guardado en Keychain.
         let storedToken: String?
@@ -202,7 +203,6 @@ final class SessionManager {
             return
         }
 
-
         // BiometricSettings guarda el customerId
         // únicamente cuando el usuario habilitó biometría.
         //
@@ -222,7 +222,7 @@ final class SessionManager {
         }
 
 
-        let biometricService =
+let biometricService =
             BiometricAuthService()
 
 
